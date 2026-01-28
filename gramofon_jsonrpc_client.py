@@ -182,16 +182,17 @@ class GramofonClient:
     
     def configure_wifi_simple(self, ssid: str, password: str, 
                              encryption: str = "psk2",
-                             device_name: Optional[str] = None,
                              disable_ap: bool = False) -> Dict:
         """
         Configure WiFi using the easy setup method.
+        
+        Note: Device name should be set separately using set_device_name()
+        after WiFi configuration.
         
         Args:
             ssid: WiFi network name
             password: WiFi network password
             encryption: Encryption type (default: "psk2" for WPA2)
-            device_name: Optional friendly name for the device
             disable_ap: Whether to disable the device's access point
             
         Returns:
@@ -204,9 +205,6 @@ class GramofonClient:
             "encryption": encryption,
             "ap_disabled": disable_ap
         }
-        
-        if device_name:
-            params["gramofon_name"] = device_name
         
         return self._call("anet", "doeasysetup", params)
     
@@ -378,13 +376,10 @@ class GramofonClient:
             print(f"\n{step_num}. Configuring WiFi...")
             print(f"   SSID: {ssid}")
             print(f"   Password: {'*' * len(password)}")
-            if device_name:
-                print(f"   Device Name: {device_name}")
             
             result = self.configure_wifi_simple(
                 ssid=ssid,
-                password=password,
-                device_name=device_name
+                password=password
             )
             print(f"   ✓ WiFi configuration sent successfully")
             results['steps_completed'].append('wifi_config')
@@ -408,6 +403,28 @@ class GramofonClient:
         except Exception as e:
             print(f"   ⚠ WiFi reload error: {e}")
             print(f"      Configuration may still have been applied")
+        
+        # Step 5: Set device name if provided (AFTER WiFi config)
+        if device_name:
+            try:
+                step_num += 1
+                print(f"\n{step_num}. Setting device name...")
+                print(f"   Name: {device_name}")
+                
+                # Wait a moment for WiFi to apply
+                import time
+                time.sleep(2)
+                
+                result = self.set_device_name(device_name)
+                print(f"   ✓ Device name set successfully")
+                results['steps_completed'].append('device_name')
+                results['name_result'] = result
+                
+            except Exception as e:
+                print(f"   ⚠ Warning: Could not set device name: {e}")
+                print(f"      WiFi configuration was successful though")
+                print(f"      You can set the name later with:")
+                print(f"      python gramofon_jsonrpc_client.py --ip <device_ip> name --set '{device_name}'")
         
         # Success!
         results['success'] = True

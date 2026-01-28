@@ -135,35 +135,56 @@ get_wifi() {
 configure_wifi() {
     local ssid="$1"
     local password="$2"
-    local device_name="$3"
     
     echo -e "${YELLOW}Configuring WiFi...${NC}"
     echo -e "  SSID: ${ssid}"
     echo -e "  Password: ${password//?/*}"
-    [ -n "$device_name" ] && echo -e "  Device Name: ${device_name}"
     
-    # Build params
-    local params="{\"netmode\":\"wcliclone\",\"ssid\":\"$ssid\",\"key\":\"$password\",\"encryption\":\"psk2\",\"ap_disabled\":false"
-    
-    if [ -n "$device_name" ]; then
-        params="${params},\"gramofon_name\":\"$device_name\""
-    fi
-    
-    params="${params}}"
+    # Build params WITHOUT device name (set separately later)
+    local params="{\"netmode\":\"wcliclone\",\"ssid\":\"$ssid\",\"key\":\"$password\",\"encryption\":\"psk2\",\"ap_disabled\":false}"
     
     # Send configuration
     local response=$(jsonrpc_call "anet" "doeasysetup" "$params")
     
     if echo "$response" | grep -q '"result":\[0'; then
-        echo -e "${GREEN}WiFi configuration sent successfully${NC}"
+        echo -e "${GREEN}✓ WiFi configuration sent successfully${NC}"
         
         # Reload WiFi
         echo -e "${YELLOW}Reloading WiFi configuration...${NC}"
         jsonrpc_call "wifid" "reload" "{}" > /dev/null
-        echo -e "${GREEN}WiFi reloaded${NC}"
+        echo -e "${GREEN}✓ WiFi reloaded${NC}"
+        return 0
     else
-        echo -e "${RED}Failed to configure WiFi${NC}"
+        echo -e "${RED}✗ Failed to configure WiFi${NC}"
         echo "$response"
+        return 1
+    fi
+}
+
+# Set device name (separate from WiFi config)
+set_device_name() {
+    local name="$1"
+    
+    if [ -z "$name" ]; then
+        return 0
+    fi
+    
+    echo -e "${YELLOW}Setting device name...${NC}"
+    echo -e "  Name: ${name}"
+    
+    # Wait a moment for WiFi to settle
+    sleep 2
+    
+    local params="{\"mdnsname\":\"$name\",\"spotifyname\":\"$name\"}"
+    local response=$(jsonrpc_call "anet" "set_gramofonname" "$params")
+    
+    if echo "$response" | grep -q '"result":\[0'; then
+        echo -e "${GREEN}✓ Device name set successfully${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}⚠ Could not set device name${NC}"
+        echo -e "${YELLOW}  You can set it later with:${NC}"
+        echo -e "${YELLOW}  $0 name '$name'${NC}"
         return 1
     fi
 }
@@ -279,11 +300,18 @@ complete_setup() {
     
     # Step 2: Configure WiFi (critical)
     echo -e "${YELLOW}Step 2: Configuring WiFi${NC}"
-    if configure_wifi "$ssid" "$password" "$device_name"; then
+    if configure_wifi "$ssid" "$password"; then
         echo ""
     else
         echo -e "${RED}WiFi configuration failed. Aborting.${NC}"
         return 1
+    fi
+    
+    # Step 3: Set device name (optional, separate step)
+    if [ -n "$device_name" ]; then
+        echo -e "${YELLOW}Step 3: Setting device name${NC}"
+        set_device_name "$device_name"
+        echo ""
     fi
     
     # Success message
