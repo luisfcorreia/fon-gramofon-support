@@ -321,7 +321,7 @@ class GramofonClient:
     
     def configure_device(self, ssid: str, password: str, 
                         device_name: Optional[str] = None,
-                        scan_first: bool = True) -> Dict:
+                        scan_first: bool = False) -> Dict:
         """
         Complete device configuration workflow.
         
@@ -329,80 +329,96 @@ class GramofonClient:
             ssid: WiFi network name
             password: WiFi password
             device_name: Optional friendly name for the device
-            scan_first: Whether to scan for networks first (default: True)
+            scan_first: Whether to scan for networks first (default: False)
         
         Returns:
             Dict with configuration results
         """
-        results = {}
+        results = {
+            'success': False,
+            'steps_completed': []
+        }
         
-        # Login
-        print("Logging in...")
-        results['login'] = self.login()
-        print(f"Session ID: {self.session_id}")
-        
-        # Get initial status
-        print("Getting device status...")
         try:
-            results['initial_status'] = self.get_status()
+            # Step 1: Login
+            print("1. Logging in...")
+            self.login()
+            print(f"   ✓ Logged in (Session ID: {self.session_id})")
+            results['steps_completed'].append('login')
+            results['session_id'] = self.session_id
+            
         except Exception as e:
-            print(f"Warning: Could not get status: {e}")
+            print(f"   ✗ Login failed: {e}")
+            results['error'] = f"Login failed: {e}"
+            return results
         
-        # Scan for networks (optional)
+        # Step 2: Optional network scan
         if scan_first:
-            print("Scanning for WiFi networks...")
             try:
-                networks = self.scan_networks()
-                results['available_networks'] = networks
-                print(f"Found {len(networks)} networks")
+                print("\n2. Scanning for WiFi networks...")
+                networks = self.scan_networks(wait_time=3)
+                print(f"   ✓ Found {len(networks)} networks")
+                results['steps_completed'].append('scan')
                 
-                # Check if target SSID is visible
-                target_network = next((n for n in networks if n.get('ssid') == ssid), None)
-                if target_network:
-                    print(f"Target network '{ssid}' found with encryption: {target_network.get('encryption')}")
+                # Check if target network is visible
+                target = next((n for n in networks if n.get('ssid') == ssid), None)
+                if target:
+                    print(f"   ✓ Target network '{ssid}' found")
+                    print(f"      Encryption: {target.get('encryption', 'unknown')}")
                 else:
-                    print(f"Warning: Target network '{ssid}' not found in scan results")
+                    print(f"   ⚠ Warning: Target network '{ssid}' not found in scan")
+                    print(f"      (This may be OK if network is hidden)")
             except Exception as e:
-                print(f"Warning: Network scan failed: {e}")
+                print(f"   ⚠ Network scan failed: {e}")
+                print(f"      Continuing with configuration anyway...")
         
-        # Configure WiFi
-        print(f"Configuring WiFi (SSID: {ssid})...")
+        # Step 3: Configure WiFi (the critical step)
         try:
-            results['wifi_config'] = self.configure_wifi_simple(
+            step_num = 3 if scan_first else 2
+            print(f"\n{step_num}. Configuring WiFi...")
+            print(f"   SSID: {ssid}")
+            print(f"   Password: {'*' * len(password)}")
+            if device_name:
+                print(f"   Device Name: {device_name}")
+            
+            result = self.configure_wifi_simple(
                 ssid=ssid,
                 password=password,
                 device_name=device_name
             )
-            print("WiFi configuration sent successfully")
+            print(f"   ✓ WiFi configuration sent successfully")
+            results['steps_completed'].append('wifi_config')
+            results['wifi_result'] = result
+            
         except Exception as e:
-            print(f"Error configuring WiFi: {e}")
-            results['wifi_error'] = str(e)
-            raise
+            print(f"   ✗ WiFi configuration failed: {e}")
+            results['error'] = f"WiFi configuration failed: {e}"
+            return results
         
-        # Reload WiFi to apply changes
-        print("Reloading WiFi configuration...")
-        if self.reload_wifi():
-            print("WiFi reloaded successfully")
-        else:
-            print("Warning: WiFi reload may have failed")
-        
-        # Set device name if not done in WiFi config
-        if device_name and 'wifi_config' in results and 'error' not in str(results['wifi_config']):
-            print(f"Setting device name to: {device_name}")
-            try:
-                results['device_name'] = self.set_device_name(device_name)
-            except Exception as e:
-                print(f"Warning: Could not set device name: {e}")
-        
-        # Get final status
-        print("Getting final status...")
+        # Step 4: Reload WiFi
         try:
-            results['final_status'] = self.get_status()
+            step_num += 1
+            print(f"\n{step_num}. Reloading WiFi configuration...")
+            if self.reload_wifi():
+                print(f"   ✓ WiFi configuration reloaded")
+                results['steps_completed'].append('wifi_reload')
+            else:
+                print(f"   ⚠ WiFi reload returned no confirmation")
+                print(f"      Configuration may still have been applied")
         except Exception as e:
-            print(f"Warning: Could not get final status: {e}")
+            print(f"   ⚠ WiFi reload error: {e}")
+            print(f"      Configuration may still have been applied")
         
-        print("\n=== Configuration Complete ===")
-        print("Note: Device may reboot to apply changes. Wait 30-60 seconds.")
+        # Success!
+        results['success'] = True
+        print("\n" + "="*60)
+        print("✓ Configuration Complete!")
+        print("="*60)
+        print("\nNext steps:")
+        print("1. Wait 30-60 seconds for the device to apply settings")
+        print("2. The 'Gramofon Configuration' network will disappear")
+        print("3. Your Gramofon should connect to your home WiFi")
+        print("4. You may need to find the device's new IP on your network")
         
         return results
 
