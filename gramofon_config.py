@@ -191,16 +191,6 @@ class GramofonClient:
         except:
             return False
     
-    def check_upgrades(self) -> Dict:
-        """Check for available firmware upgrades."""
-        return self._call("mfgd", "check_upgrades", {})
-    
-    def upgrade_firmware(self, firmware_id: str) -> Dict:
-        """Apply a firmware upgrade."""
-        return self._call("mfgd", "upgrade", {
-            "firmware_id": firmware_id
-        })
-    
     def reboot(self) -> bool:
         """Reboot the device."""
         try:
@@ -447,44 +437,6 @@ def cmd_led(args):
         return 1
 
 
-def cmd_upgrade(args):
-    """Firmware upgrade operations"""
-    client = GramofonClient(device_ip=args.ip, timeout=args.timeout)
-    
-    try:
-        client.login()
-        
-        if args.check:
-            # Check for upgrades
-            result = client.check_upgrades()
-            if result and 'images' in result:
-                images = result['images']
-                if images:
-                    print("Available upgrades:")
-                    for img in images:
-                        print(f"  - {img.get('firmware_id')}: {img.get('user_message')}")
-                else:
-                    print("No upgrades available")
-            else:
-                print("Could not check for upgrades")
-                
-        elif args.apply:
-            # Apply upgrade
-            print(f"Applying firmware upgrade: {args.apply}")
-            client.upgrade_firmware(args.apply)
-            print("✓ Upgrade initiated")
-            print("Device will reboot when upgrade is complete")
-        else:
-            print("Error: No upgrade action specified", file=sys.stderr)
-            print("Use: --check or --apply FIRMWARE_ID")
-            return 1
-        
-        return 0
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-
-
 def cmd_system(args):
     """System operations"""
     client = GramofonClient(device_ip=args.ip, timeout=args.timeout)
@@ -507,10 +459,14 @@ def cmd_system(args):
         elif args.reset:
             # Factory reset
             print("WARNING: This will reset device to factory defaults!")
+            print("After reset, you'll need to setup the device again.")
             confirm = input("Type 'RESET' to confirm: ")
             if confirm == 'RESET':
                 if client.reset_to_defaults():
                     print("✓ Factory reset initiated")
+                    print("\nDevice will reboot to factory settings.")
+                    print("Wait 60 seconds, then connect to 'Gramofon Configuration' WiFi")
+                    print("to setup the device again.")
                 else:
                     print("✗ Reset failed")
                     return 1
@@ -522,6 +478,56 @@ def cmd_system(args):
             return 1
         
         return 0
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_reset(args):
+    """Factory reset command (direct access)"""
+    client = GramofonClient(device_ip=args.ip, timeout=args.timeout)
+    
+    print("="*60)
+    print("FACTORY RESET")
+    print("="*60)
+    print(f"\nDevice: {args.ip}")
+    print("\nWARNING: This will:")
+    print("  - Reset device to factory defaults")
+    print("  - Erase WiFi configuration")
+    print("  - Erase device name")
+    print("  - Reboot the device")
+    print("\nAfter reset:")
+    print("  - Device will create 'Gramofon Configuration' WiFi")
+    print("  - You'll need to run setup again")
+    print()
+    
+    confirm = input("Type 'RESET' to confirm factory reset: ")
+    
+    if confirm != 'RESET':
+        print("Cancelled")
+        return 0
+    
+    try:
+        print("\nConnecting to device...")
+        client.login()
+        print("✓ Connected")
+        
+        print("\nInitiating factory reset...")
+        if client.reset_to_defaults():
+            print("✓ Factory reset command sent")
+            print("\n" + "="*60)
+            print("Device is resetting...")
+            print("="*60)
+            print("\nNext steps:")
+            print("1. Wait 60 seconds for device to reboot")
+            print("2. Look for 'Gramofon Configuration' WiFi network")
+            print("3. Connect to it")
+            print("4. Run setup: python gramofon_config.py setup SSID PASSWORD")
+            return 0
+        else:
+            print("✗ Factory reset failed")
+            return 1
+            
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
@@ -594,7 +600,10 @@ Examples:
   # Manage device on your network
   %(prog)s --ip 192.168.1.100 led --off
   %(prog)s --ip 192.168.1.100 info
-  %(prog)s --ip 192.168.1.100 reboot
+  %(prog)s --ip 192.168.1.100 system --reboot
+  
+  # Factory reset device
+  %(prog)s --ip 192.168.1.100 reset
   
   # WiFi operations
   %(prog)s --ip 192.168.1.100 wifi --scan
@@ -643,18 +652,14 @@ Examples:
     led_parser.add_argument('--on', action='store_true', help='Turn LED on')
     led_parser.add_argument('--off', action='store_true', help='Turn LED off')
     
-    # Upgrade commands
-    upgrade_parser = subparsers.add_parser('upgrade', help='Firmware management')
-    upgrade_parser.add_argument('--check', action='store_true', 
-                               help='Check for upgrades')
-    upgrade_parser.add_argument('--apply', metavar='FIRMWARE_ID',
-                               help='Apply firmware upgrade')
-    
     # System commands
     system_parser = subparsers.add_parser('system', help='System control')
     system_parser.add_argument('--reboot', action='store_true', help='Reboot device')
     system_parser.add_argument('--reset', action='store_true', 
                               help='Factory reset (requires confirmation)')
+    
+    # Factory reset command (direct access)
+    subparsers.add_parser('reset', help='Factory reset device (guided)')
     
     # Test command
     subparsers.add_parser('test', help='Test connection to device')
@@ -673,8 +678,8 @@ Examples:
         'name': cmd_name,
         'wifi': cmd_wifi,
         'led': cmd_led,
-        'upgrade': cmd_upgrade,
         'system': cmd_system,
+        'reset': cmd_reset,
         'test': cmd_test,
     }
     

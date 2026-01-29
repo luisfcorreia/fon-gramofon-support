@@ -124,19 +124,18 @@ python gramofon_config.py --ip 192.168.1.100 wifi --reload
 # Reboot device
 python gramofon_config.py --ip 192.168.1.100 system --reboot
 
-# Factory reset (requires confirmation)
+# Factory reset (via system command)
 python gramofon_config.py --ip 192.168.1.100 system --reset
+
+# Factory reset (guided, recommended)
+python gramofon_config.py --ip 192.168.1.100 reset
 ```
 
-#### Firmware Management
-
-```bash
-# Check for firmware updates
-python gramofon_config.py --ip 192.168.1.100 upgrade --check
-
-# Apply firmware upgrade
-python gramofon_config.py --ip 192.168.1.100 upgrade --apply "2.0.14"
-```
+**Note on Factory Reset:**
+- Erases all configuration (WiFi, device name, etc.)
+- Device will reboot and create "Gramofon Configuration" network
+- You'll need to run setup again
+- Useful if you're moving the device to a new network or selling it
 
 ---
 
@@ -459,6 +458,7 @@ python gramofon_config.py --ip IP status                  # Device status
 
 # SYSTEM
 python gramofon_config.py --ip IP system --reboot         # Reboot
+python gramofon_config.py --ip IP reset                   # Factory reset (guided)
 python gramofon_config.py --ip IP test                    # Test connection
 ```
 

@@ -71,9 +71,28 @@ python gramofon_config.py --ip 192.168.1.100 wifi --get
 python gramofon_config.py --ip 192.168.1.100 system --reboot
 python gramofon_config.py --ip 192.168.1.100 test
 
-# Firmware
-python gramofon_config.py --ip 192.168.1.100 upgrade --check
+# Factory Reset
+python gramofon_config.py --ip 192.168.1.100 reset
 ```
+
+## Factory Reset
+
+Reset device to factory defaults (erases all configuration):
+
+```bash
+python gramofon_config.py --ip 192.168.1.100 reset
+```
+
+**What happens:**
+- Erases WiFi configuration
+- Erases device name
+- Device reboots to factory settings
+- Creates "Gramofon Configuration" WiFi network
+
+**After reset:**
+1. Wait 60 seconds for reboot
+2. Connect to "Gramofon Configuration" WiFi
+3. Run setup: `python gramofon_config.py setup SSID PASSWORD`
 
 ## Discovery Tool Commands
 
