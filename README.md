@@ -2,7 +2,7 @@
 
 Complete Python toolkit for configuring and managing Gramofon devices. These tools were created through reverse engineering of the Gramofon Setup APK to enable continued use of these legacy devices.
 
-## 📦 What You Need
+## What You Need
 
 ### Two Simple Python Scripts
 
@@ -11,7 +11,7 @@ Complete Python toolkit for configuring and managing Gramofon devices. These too
 
 That's it! Everything else is optional documentation.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Initial Setup (First Time)
 
@@ -46,7 +46,7 @@ That's all you need to know! Read below for more details.
 
 ---
 
-## 📖 Detailed Documentation
+## Detailed Documentation
 
 ### gramofon_config.py - Main Configuration Tool
 
@@ -191,7 +191,7 @@ This will:
 
 ---
 
-## 🎯 Common Use Cases
+## Common Use Cases
 
 ### Turn Off All Device LEDs
 
@@ -256,7 +256,7 @@ python gramofon_config.py --ip 192.168.1.100 status | python -m json.tool
 
 ---
 
-## 🔧 Advanced Usage
+## Advanced Usage
 
 ### Custom Timeout
 
@@ -314,7 +314,7 @@ turn_off_led('192.168.1.100')
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Cannot Find "Gramofon Configuration" Network
 
@@ -385,7 +385,7 @@ python gramofon_config.py --ip 192.168.1.100 led --off
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 ### Required
 - **Python 3.6+**
@@ -414,7 +414,7 @@ gramofon-discovery --list
 
 ---
 
-## 🔐 Security Notes
+## Security Notes
 
 The Gramofon uses simple admin/admin authentication:
 
@@ -425,7 +425,7 @@ The Gramofon uses simple admin/admin authentication:
 
 ---
 
-## 📚 Additional Documentation
+## Additional Documentation
 
 ### Complete API Reference
 - **COMPLETE_API_DOCUMENTATION.md** - Full JSON-RPC API documentation
@@ -435,7 +435,7 @@ The Gramofon uses simple admin/admin authentication:
 
 ---
 
-## 🎉 Quick Reference Card
+## Quick Reference Card
 
 ```bash
 # SETUP (once)
@@ -464,7 +464,7 @@ python gramofon_config.py --ip IP test                    # Test connection
 
 ---
 
-## 🙏 Credits
+## Credits
 
 - Reverse engineered from Gramofon Setup APK v114602
 - Decompiled Java source code analysis
@@ -474,13 +474,13 @@ python gramofon_config.py --ip IP test                    # Test connection
 
 ---
 
-## 📝 License
+## License
 
 This work is provided for educational purposes and to enable continued use of legacy hardware whose manufacturer has ceased operations. The reverse engineering was performed solely to maintain compatibility with purchased hardware.
 
 ---
 
-## 💡 Tips
+## Tips
 
 1. **Save device IPs**: Once you discover your devices, note their IPs for faster access
 2. **Use aliases**: Create shell aliases for frequent commands
